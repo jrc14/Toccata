@@ -7,15 +7,15 @@
   IgnorableNamespaces="uap mp">
 
   <Identity
-    Name="3cfc6942-fe7a-4e29-a218-69a8bdff9da2"
-    Publisher="CN=home"
+    Name="5957Turnipsoft.ToccataPlayer"
+    Publisher="CN=B62C87CB-2ED8-49A1-B55B-A2ECC5314803"
     Version="2.0.0.0" />
 
-  <mp:PhoneIdentity PhoneProductId="3cfc6942-fe7a-4e29-a218-69a8bdff9da2" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
+  <mp:PhoneIdentity PhoneProductId="8abde447-d5c1-4492-afd3-6af3256cbf07" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
   <Properties>
-    <DisplayName>Toccata</DisplayName>
-    <PublisherDisplayName>home</PublisherDisplayName>
+    <DisplayName>Toccata Player</DisplayName>
+    <PublisherDisplayName>Turnipsoft</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
 
@@ -32,7 +32,7 @@
       Executable="$targetnametoken$.exe"
       EntryPoint="Toccata.App">
       <uap:VisualElements
-        DisplayName="Toccata"
+        DisplayName="Toccata Player"
         Square150x150Logo="Assets\Square150x150Logo.png"
         Square44x44Logo="Assets\Square44x44Logo.png"
         Description="Toccata"
