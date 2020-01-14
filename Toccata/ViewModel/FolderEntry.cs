@@ -11,10 +11,6 @@ namespace Toccata.ViewModel
 {
     public class FolderEntry : INotifyPropertyChanged
     {
-        private object _storage = (object)null;
-        public bool _IsFolder = false;
-        public string _DisplayName = "";
-
         public FolderEntry(StorageFolder f)
         {
             this.storage = (object)f;
@@ -27,6 +23,7 @@ namespace Toccata.ViewModel
             this.IsFolder = false;
         }
 
+        private object _storage = null;
         public object storage
         {
             get
@@ -42,10 +39,10 @@ namespace Toccata.ViewModel
                         this.DisplayName = "NULL";
                         break;
                     case StorageFile _:
-                        this.DisplayName = (value as StorageFile).get_DisplayName();
+                        this.DisplayName = (value as StorageFile).DisplayName;
                         break;
                     case StorageFolder _:
-                        this.DisplayName = (value as StorageFolder).get_DisplayName();
+                        this.DisplayName = (value as StorageFolder).DisplayName;
                         break;
                     default:
                         this.DisplayName = "INVALID";
@@ -53,6 +50,8 @@ namespace Toccata.ViewModel
                 }
             }
         }
+
+        private bool _IsFolder = false;
 
         public bool IsFolder
         {
@@ -65,10 +64,11 @@ namespace Toccata.ViewModel
                 if (value == this._IsFolder)
                     return;
                 this._IsFolder = value;
-                this.OnPropertyChanged(nameof(IsFolder));
+                this.OnPropertyChanged();
             }
         }
 
+        private string _DisplayName = "";
         public string DisplayName
         {
             get
@@ -84,7 +84,7 @@ namespace Toccata.ViewModel
             }
         }
 
-        public event PropertyChangedEventHandler PropertyChanged = (_param1, _param2) => { };
+        public event PropertyChangedEventHandler PropertyChanged = (o, e) => { };
 
         public void OnPropertyChanged([CallerMemberName] string propertyName = null)
         {
@@ -94,5 +94,4 @@ namespace Toccata.ViewModel
             propertyChanged((object)this, new PropertyChangedEventArgs(propertyName));
         }
     }
-}
 }

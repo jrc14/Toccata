@@ -7,14 +7,12 @@ namespace Toccata.ViewModel
 {
     public class PlayableItem : INotifyPropertyChanged
     {
-        public string _DisplayName = "";
-        private StorageFile _storage = (StorageFile)null;
-
         public PlayableItem(StorageFile f)
         {
             this.storage = f;
         }
 
+        private string _DisplayName = "";
         public string DisplayName
         {
             get
@@ -26,7 +24,7 @@ namespace Toccata.ViewModel
                 if (value == this._DisplayName)
                     return;
                 this._DisplayName = value;
-                this.OnPropertyChanged(nameof(DisplayName));
+                this.OnPropertyChanged();
             }
         }
 
@@ -38,6 +36,7 @@ namespace Toccata.ViewModel
             }
         }
 
+        private StorageFile _storage = null;
         public StorageFile storage
         {
             get
@@ -50,11 +49,11 @@ namespace Toccata.ViewModel
                 if (value == null)
                     this.DisplayName = "NULL";
                 else
-                    this.DisplayName = value.get_DisplayName();
+                    this.DisplayName = value.DisplayName;
             }
         }
 
-        public event PropertyChangedEventHandler PropertyChanged = (_param1, _param2) => { };
+        public event PropertyChangedEventHandler PropertyChanged = (o, e) => { };
 
         public void OnPropertyChanged([CallerMemberName] string propertyName = null)
         {

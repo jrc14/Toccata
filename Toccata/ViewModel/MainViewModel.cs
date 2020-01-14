@@ -16,19 +16,8 @@ namespace Toccata.ViewModel
 {
     public class MainViewModel : INotifyPropertyChanged
     {
-        private static MainViewModel _Instance = new MainViewModel();
-        private DateTime dtLastSliderUpdate = DateTime.Now;
-        private List<PlayableItem> history = new List<PlayableItem>();
-        public StorageFolder _RootFolder = (StorageFolder)null;
-        public double _PlayerPanelSize = 0.0;
-        public double _QueuePanelWidth = 0.0;
-        public double _QueuePanelHeight = 0.0;
-        public Orientation _PlayerOrientation = (Orientation)0;
-        private ObservableCollection<FolderEntry> _Artists = new ObservableCollection<FolderEntry>();
-        private ObservableCollection<FolderEntry> _Albums = new ObservableCollection<FolderEntry>();
-        private ObservableCollection<FolderEntry> _Tracks = new ObservableCollection<FolderEntry>();
-        private ObservableCollection<PlayableItem> _PlayQueue = new ObservableCollection<PlayableItem>();
 
+        private static MainViewModel _Instance = new MainViewModel();
         public static MainViewModel Instance
         {
             get
@@ -39,19 +28,20 @@ namespace Toccata.ViewModel
 
         public void Initialise()
         {
-            this.RootFolder = KnownFolders.get_MusicLibrary();
+            this.RootFolder = KnownFolders.MusicLibrary;
             ToccataModel.SetUpMediaPlayer();
         }
 
         public async void OpenArtistFolder(FolderEntry f)
         {
-            this.Tracks.Clear();
-            int num = (int)await ToccataModel.PopulateFolderItems(this.Albums, f.storage as StorageFolder);
+            this.Albums.Clear();
+            await ToccataModel.PopulateFolderItems(this.Albums, f.storage as StorageFolder);
         }
 
         public async void OpenAlbumFolder(FolderEntry f)
         {
-            int num = (int)await ToccataModel.PopulateFolderItems(this.Tracks, f.storage as StorageFolder);
+            this.Tracks.Clear();
+            await ToccataModel.PopulateFolderItems(this.Tracks, f.storage as StorageFolder);
             if (this.PlayQueue.Count != 0)
                 return;
             this.AddTracks();
@@ -86,6 +76,7 @@ namespace Toccata.ViewModel
             ToccataModel.Pause();
         }
 
+        private List<PlayableItem> history = new List<PlayableItem>();
         public void Back()
         {
             if (this.history.Count <= 0)
@@ -123,7 +114,7 @@ namespace Toccata.ViewModel
 
         public void StartPlayingIfAppropriate()
         {
-            if (this.PlayQueue.Count <= 0 || !ToccataModel.MediaPlayerHasNoSource())
+            if (this.PlayQueue.Count == 0 || !ToccataModel.MediaPlayerHasNoSource())
                 return;
             ToccataModel.Play(this.PlayQueue[0].storage);
         }
@@ -189,22 +180,8 @@ namespace Toccata.ViewModel
                         {
                             try
                             {
-                                TaskAwaiter<StorageFile> awaiter = (TaskAwaiter<StorageFile>)WindowsRuntimeSystemExtensions.GetAwaiter<StorageFile>((IAsyncOperation<M0>)StorageFile.GetFileFromPathAsync(path));
-                                if (!((TaskAwaiter<StorageFile>)ref awaiter).get_IsCompleted())
-                                {
-                                    int num;
-                                    // ISSUE: reference to a compiler-generated field
-                                    this.\u003C\u003E1__state = num = 1;
-                                    TaskAwaiter<StorageFile> taskAwaiter = awaiter;
-                                    // ISSUE: variable of a compiler-generated type
-                                    MainViewModel.\u003CLoadPlayQueue\u003Ed__19 stateMachine = this;
-                                    // ISSUE: reference to a compiler-generated field
-                                    this.\u003C\u003Et__builder.AwaitUnsafeOnCompleted < TaskAwaiter<StorageFile>, MainViewModel.\u003CLoadPlayQueue\u003Ed__19 > (ref awaiter, ref stateMachine);
-                                    return;
-                                }
-                                StorageFile trackFile = ((TaskAwaiter<StorageFile>)ref awaiter).GetResult();
+                                StorageFile trackFile =await  StorageFile.GetFileFromPathAsync(path);
                                 this.PlayQueue.Add(new PlayableItem(trackFile));
-                                trackFile = (StorageFile)null;
                             }
                             catch (Exception ex)
                             {
@@ -252,7 +229,7 @@ namespace Toccata.ViewModel
                 foreach (PlayableItem play in (Collection<PlayableItem>)this.PlayQueue)
                 {
                     PlayableItem i = play;
-                    paths.Add(i.storage.get_Path());
+                    paths.Add(i.storage.Path);
                     i = (PlayableItem)null;
                 }
                 using (Stream fr1 = await WindowsRuntimeStorageExtensions.OpenStreamForWriteAsync((IStorageFile)f))
@@ -275,46 +252,65 @@ namespace Toccata.ViewModel
             }
         }
 
+
+        private DateTime dtNextSliderUpdate = DateTime.MinValue;
         public void OnPlaybackPositionChanged(TimeSpan current, TimeSpan total)
         {
-            // ISSUE: object of a compiler-generated type is created
-            // ISSUE: variable of a compiler-generated type
-            MainViewModel.\u003C\u003Ec__DisplayClass23_0 cDisplayClass230 = new MainViewModel.\u003C\u003Ec__DisplayClass23_0();
-            // ISSUE: reference to a compiler-generated field
-            cDisplayClass230.current = current;
-            // ISSUE: reference to a compiler-generated field
-            cDisplayClass230.total = total;
-            // ISSUE: reference to a compiler-generated field
-            // ISSUE: reference to a compiler-generated field
-            // ISSUE: reference to a compiler-generated field
-            if (!(this.dtLastSliderUpdate.AddSeconds(1.0) < DateTime.Now) && !(cDisplayClass230.current == TimeSpan.Zero) && !(cDisplayClass230.current == cDisplayClass230.total))
-                return;
-            this.dtLastSliderUpdate = DateTime.Now;
-            // ISSUE: method pointer
-            MainPage.StaticDispatcher.RunAsync((CoreDispatcherPriority)0, new DispatchedHandler((object)cDisplayClass230, __methodptr(\u003COnPlaybackPositionChanged\u003Eb__0)));
+            if (DateTime.Now > dtNextSliderUpdate || current==total || current==TimeSpan.Zero)
+            {
+                dtNextSliderUpdate = DateTime.Now.AddSeconds(1);
+
+                MainPage.StaticDispatcher.RunAsync(CoreDispatcherPriority.Normal, () => { MainPage.SetSliderPosition(current, total); });
+            }
         }
 
         public void OnPlaybackStateChanged(MediaPlaybackState s, bool trackFinished)
         {
-            // ISSUE: object of a compiler-generated type is created
-            // ISSUE: variable of a compiler-generated type
-            MainViewModel.\u003C\u003Ec__DisplayClass25_0 cDisplayClass250 = new MainViewModel.\u003C\u003Ec__DisplayClass25_0();
-            // ISSUE: reference to a compiler-generated field
-            cDisplayClass250.\u003C\u003E4__this = this;
-            // ISSUE: reference to a compiler-generated field
-            cDisplayClass250.trackFinished = trackFinished;
-            if (s == 3)
+            if (s == MediaPlaybackState.Paused)
             {
-                // ISSUE: method pointer
-                MainPage.StaticDispatcher.RunAsync((CoreDispatcherPriority)0, new DispatchedHandler((object)cDisplayClass250, __methodptr(\u003COnPlaybackStateChanged\u003Eb__0)));
+                MainPage.StaticDispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
+                {
+                    MainPage.SetPlayButtonAppearance(false); // "play"
+
+                    if (trackFinished)
+                    {
+                        MainPage.SetNowPlaying("");
+
+                        if (PlayQueue.Count > 0)
+                            PlayQueue.RemoveAt(0);
+
+                        if (PlayQueue.Count > 0)
+                            ToccataModel.Play(this.PlayQueue[0].storage);
+
+                    }
+                    else // paused but not finished the track
+                    {
+
+                    }
+                });
             }
-            else
+            else // playing, buffering, opening, none, or whatever
             {
-                // ISSUE: method pointer
-                MainPage.StaticDispatcher.RunAsync((CoreDispatcherPriority)0, new DispatchedHandler((object)cDisplayClass250, __methodptr(\u003COnPlaybackStateChanged\u003Eb__1)));
+                MainPage.StaticDispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
+                {
+                    if (s == MediaPlaybackState.Playing)
+                    {
+                        MainPage.SetPlayButtonAppearance(true); // "pause"
+                    }
+                    else
+                    {
+                        MainPage.SetPlayButtonAppearance(false); // "play"
+                    }
+
+                    if (PlayQueue.Count > 0)
+                        MainPage.SetNowPlaying(PlayQueue[0].DisplayName + " (" + PlayQueue[0].storage.Path + ")");
+                    else
+                        MainPage.SetNowPlaying("");
+                });
             }
         }
 
+        private StorageFolder _RootFolder = (StorageFolder)null;
         public StorageFolder RootFolder
         {
             get
@@ -326,11 +322,14 @@ namespace Toccata.ViewModel
                 if (value == this._RootFolder)
                     return;
                 this._RootFolder = value;
-                this.OnPropertyChanged(nameof(RootFolder));
+                this.OnPropertyChanged();
+
+                this.Artists.Clear();
                 ToccataModel.PopulateFolderItems(this.Artists, value);
             }
         }
 
+        private double _PlayerPanelSize = 0.0;
         public double PlayerPanelSize
         {
             get
@@ -342,10 +341,11 @@ namespace Toccata.ViewModel
                 if (value == this._PlayerPanelSize)
                     return;
                 this._PlayerPanelSize = value;
-                this.OnPropertyChanged(nameof(PlayerPanelSize));
+                this.OnPropertyChanged();
             }
         }
 
+        private double _QueuePanelWidth = 0.0;
         public double QueuePanelWidth
         {
             get
@@ -357,10 +357,11 @@ namespace Toccata.ViewModel
                 if (value == this._QueuePanelWidth)
                     return;
                 this._QueuePanelWidth = value;
-                this.OnPropertyChanged(nameof(QueuePanelWidth));
+                this.OnPropertyChanged();
             }
         }
 
+        private double _QueuePanelHeight = 0.0;
         public double QueuePanelHeight
         {
             get
@@ -372,10 +373,11 @@ namespace Toccata.ViewModel
                 if (value == this._QueuePanelHeight)
                     return;
                 this._QueuePanelHeight = value;
-                this.OnPropertyChanged(nameof(QueuePanelHeight));
+                this.OnPropertyChanged();
             }
         }
 
+        public Orientation _PlayerOrientation = (Orientation)0;
         public Orientation PlayerOrientation
         {
             get
@@ -387,10 +389,11 @@ namespace Toccata.ViewModel
                 if (value == this._PlayerOrientation)
                     return;
                 this._PlayerOrientation = value;
-                this.OnPropertyChanged(nameof(PlayerOrientation));
+                this.OnPropertyChanged();
             }
         }
 
+        private ObservableCollection<FolderEntry> _Artists = new ObservableCollection<FolderEntry>();
         public ObservableCollection<FolderEntry> Artists
         {
             get
@@ -399,6 +402,7 @@ namespace Toccata.ViewModel
             }
         }
 
+        private ObservableCollection<FolderEntry> _Albums = new ObservableCollection<FolderEntry>();
         public ObservableCollection<FolderEntry> Albums
         {
             get
@@ -407,6 +411,7 @@ namespace Toccata.ViewModel
             }
         }
 
+        private ObservableCollection<FolderEntry> _Tracks = new ObservableCollection<FolderEntry>();
         public ObservableCollection<FolderEntry> Tracks
         {
             get
@@ -415,6 +420,7 @@ namespace Toccata.ViewModel
             }
         }
 
+        private ObservableCollection<PlayableItem> _PlayQueue = new ObservableCollection<PlayableItem>();
         public ObservableCollection<PlayableItem> PlayQueue
         {
             get

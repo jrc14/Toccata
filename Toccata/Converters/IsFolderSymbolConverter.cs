@@ -7,8 +7,8 @@ using System.Threading.Tasks;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Data;
 
-namespace Toccata.Converters
-{
+namespace Toccata
+{ 
     public sealed class IsFolderSymbolConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, string language)
