@@ -1,14 +1,122 @@
-﻿<Page
+﻿<Page x:ConnectionId='1'
     x:Class="Toccata.MainPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="using:Toccata"
+    xmlns:vm="using:Toccata.ViewModel"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
-    <Grid>
+    <Page.Resources>
+        <local:IsFolderSymbolConverter x:Key="isFolderSymbolConverter"/>
+        <DataTemplate x:ConnectionId='2' x:Key="keyFolderItemTemplate" x:Name="nameFolderItemTemplate"                            >
+            <ScrollViewer x:ConnectionId='7' HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                <StackPanel Orientation="Horizontal" Margin="2">
+                    <SymbolIcon x:ConnectionId='8' Foreground="White"                                                                                Margin="0,0,12,0"/>
+                    <TextBlock x:ConnectionId='9' Foreground="White"                             TextWrapping="NoWrap" HorizontalAlignment="Left" HorizontalTextAlignment="Left"/>
+                </StackPanel>
+            </ScrollViewer>
+        </DataTemplate>
+        <DataTemplate x:ConnectionId='3' x:Key="keyPlayableItemTemplate" x:Name="namePlayableItemTemplate"                             >
+            <ScrollViewer x:ConnectionId='4' HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                <Grid x:ConnectionId='5'  Margin="2"                                                                                   HorizontalAlignment="Left">
+                    <TextBlock x:ConnectionId='6' Foreground="White"                             TextWrapping="NoWrap" HorizontalAlignment="Left" HorizontalTextAlignment="Left"/>
+                </Grid>
+            </ScrollViewer>
+        </DataTemplate>
 
+
+    </Page.Resources>
+
+    <Grid Background="DarkGreen">
+        <StackPanel x:ConnectionId='10'                                                          Spacing="0">
+            <Grid x:ConnectionId='11' x:Name="gdPlayerPanel" Margin="8,8,0,0" BorderBrush="Gray" BorderThickness="1" VerticalAlignment="Top" HorizontalAlignment="Left"                                                                                                   >
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Grid Margin="8" Grid.Row="0">
+                    <Grid ColumnSpacing="8">
+                        <Grid.ColumnDefinitions >
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Text="artist" Grid.Row="0" Grid.Column="0" Foreground="White" FontWeight="Bold"/>
+                        <TextBlock Text="album" Grid.Row="0" Grid.Column="1" Foreground="White" FontWeight="Bold"/>
+                        <TextBlock Text="track" Grid.Row="0" Grid.Column="2" Foreground="White " FontWeight="Bold"/>
+
+                        <ListView x:ConnectionId='26' Grid.Row="1" Grid.Column="0"                                   Background="#004000" ItemTemplate="{StaticResource keyFolderItemTemplate}" IsItemClickEnabled="True" SelectionMode="None"                            />
+                        <ListView x:ConnectionId='27' Grid.Row="1" Grid.Column="1"                                    Background="#004000" ItemTemplate="{StaticResource keyFolderItemTemplate}" IsItemClickEnabled="True" SelectionMode="None"                           />
+                        <ListView x:ConnectionId='28' Grid.Row="1" Grid.Column="2"                                   Background="#004000" ItemTemplate="{StaticResource keyFolderItemTemplate}" IsItemClickEnabled="True" SelectionMode="None"                           />
+                        
+                    </Grid>
+                </Grid>
+                <Grid Margin="8" Grid.Row="1" MinHeight="100" Background="#004000" BorderBrush="Gray" BorderThickness="1">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <Grid.ColumnDefinitions >
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <local:ToccataSlider x:ConnectionId='17' x:Name="slPosition"                                                                                                                                       Margin="12,0,12,0" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="6" Foreground="White" Background="DarkGray"/>
+                    <TextBlock x:ConnectionId='18' x:Name="tbNowPlaying" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="5" Foreground="White" VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="12,0,0,-8" Padding="0"/>
+                    <TextBlock x:ConnectionId='19' x:Name="tbPosition" Grid.Row="1" Grid.Column="5" Foreground="White" VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="0,0,12,-8" Padding="0"/>
+                    
+                    <AppBarButton x:ConnectionId='20' Icon="Stop"                       Label="stop" Grid.Row="0" Grid.Column="0" Foreground="White" HorizontalAlignment="Center"/>
+                    <AppBarButton x:ConnectionId='21' x:Name="btnPlay"                       Icon="Play" Label="play" Grid.Row="0" Grid.Column="1" Foreground="White" HorizontalAlignment="Center"/>
+                    <AppBarButton x:ConnectionId='22' Icon="Previous"                       Label="back" Grid.Row="0" Grid.Column="2" Foreground="White" HorizontalAlignment="Center"/>
+                    <AppBarButton x:ConnectionId='23' Icon="Next"                       Label="next" Grid.Row="0" Grid.Column="3" Foreground="White" HorizontalAlignment="Center"/>
+                    <AppBarButton x:ConnectionId='24' Icon="Add"                      Label="add" Grid.Row="0" Grid.Column="4" Foreground="White" HorizontalAlignment="Center"/>
+                    <AppBarButton x:ConnectionId='25' Icon="Clear"                        Label="clear" Grid.Row="0" Grid.Column="5" Foreground="White" HorizontalAlignment="Center"/>
+                </Grid>
+            </Grid>
+            <Grid x:ConnectionId='12' x:Name="gdPlayQueue" Margin="8,8,0,0" BorderBrush="Gray" BorderThickness="1" VerticalAlignment="Top" HorizontalAlignment="Left"                                                                                                     >
+                <Grid Margin="8">
+                    <Grid >
+                        <Grid.ColumnDefinitions >
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Text="play queue" Grid.Row="0" Grid.Column="0" Foreground="White" FontWeight="Bold"/>
+                        <ListView x:ConnectionId='13' Grid.Row="1" Grid.Column="0"                                      Background="#004000" ItemTemplate="{StaticResource keyPlayableItemTemplate}" IsItemClickEnabled="False" SelectionMode="None"/>
+                        <Grid Grid.Row="2" Grid.Column="0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions >
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <AppBarButton x:ConnectionId='14' Icon="Save"                       Label="save" Grid.Row="0" Grid.Column="1" Foreground="White" HorizontalAlignment="Center"/>
+                            <AppBarButton x:ConnectionId='15' Icon="OpenFile"                       Label="load" Grid.Row="0" Grid.Column="2" Foreground="White" HorizontalAlignment="Center"/>
+                            <AppBarButton x:ConnectionId='16' Icon="Shuffle"                          Label="shuffle" Grid.Row="0" Grid.Column="3" Foreground="White" HorizontalAlignment="Center"/>
+                        </Grid>
+                    </Grid>
+                </Grid>
+            </Grid>
+        </StackPanel>
     </Grid>
 </Page>
+
