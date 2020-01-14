@@ -418,6 +418,8 @@ namespace Toccata.ViewModel
 
                         if (PlayQueue.Count > 0) // if there is now a track at the top of the queue ...
                             ToccataModel.Play(this.PlayQueue[0].storage); // ... start playing it.
+                        else
+                            ToccataModel.Stop(); // ... otherwise, we should hard-stop the player, leaving it ready to play something, when something is queued up.
 
                     }
                     else // paused but not finished the track

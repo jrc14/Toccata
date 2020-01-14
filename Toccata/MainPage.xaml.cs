@@ -306,8 +306,9 @@ namespace Toccata
         }
 
         private void PlayQueue_ItemHolding(object sender, HoldingRoutedEventArgs e)
-        {
-            this.PlayQueue_ItemTapped(sender, new TappedRoutedEventArgs());
+        { 
+            if(e.HoldingState==Windows.UI.Input.HoldingState.Started)
+                this.PlayQueue_ItemTapped(sender, new TappedRoutedEventArgs());
         }
 
         private async void btnSave_Click(object sender, RoutedEventArgs e)
