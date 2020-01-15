@@ -46,15 +46,19 @@ namespace Toccata.Model
     public class ToccataModel
     {
         /// <summary>
-        /// Reads a folder, and populates a collection of FolderEntries from it.  All folders are read in, and any track files
+        /// Reads a folder, and populates a collection of FolderEntries from it.  All folders are read in, plus any music files
         /// (WMA and  MP3 extensions).  The collection is sorted: folders in alphabetic order, then tracks sorted by track number
         /// (the track number is assumed to be the start of the file name; if the file names don't start with a number, then
         /// the method will look in the music metadata of the files).
+        /// An optional string parameter will, if supplied, alter the method's behaviour, so it only adds items whose DisplayNames contain that string.
+        /// In that case, you can also pass in a list, unfilteredItems, which will get a list of all items, whether or not they matched the filter.
         /// </summary>
         /// <param name="collection">collection to be populated</param>
         /// <param name="folder">the folder to be read</param>
+        /// <param name="displayNameFilter">optional filter, to restrict items by DisplayName</param>
+        /// <param name="unfilteredItems">optional list, in which the unfiltered list of items will be returned</param>
         /// <returns></returns>
-        public static async Task<bool> PopulateFolderItems( ObservableCollection<FolderEntry> collection, StorageFolder folder)
+        public static async Task<bool> PopulateFolderItems( ObservableCollection<FolderEntry> collection, StorageFolder folder, string displayNameFilter=null, List<FolderEntry> unfilteredItems=null)
         {
             bool success = true;
 
@@ -63,8 +67,12 @@ namespace Toccata.Model
             try
             {
                 foreach (StorageFile f in await folder.GetFilesAsync())
+                {
                     if (f.FileType.ToUpper() == ".MP3" || f.FileType.ToUpper() == ".WMA")
+                    {
                         files.Add(f);
+                    }
+                }
             }
             catch (Exception )
             {
@@ -117,11 +125,14 @@ namespace Toccata.Model
             if (!success)
                 return false;
 
-            List<StorageFolder> folders = null;
+            List<StorageFolder> folders = new List<StorageFolder>();
 
             try
             {
-                folders = new List<StorageFolder>(await folder.GetFoldersAsync());
+                foreach (StorageFolder f in await folder.GetFoldersAsync())
+                {
+                    folders.Add(f);
+                }
             }
             catch (Exception)
             {
@@ -134,10 +145,30 @@ namespace Toccata.Model
             folders.Sort((f1, f2) => f1.DisplayName.CompareTo(f2.DisplayName));
 
             foreach (StorageFolder f in folders)
-                collection.Add(new FolderEntry(f));
+            {
+                // The ugly expression is:
+                //   true (==keep the file) if displayNameFilter is null or empty
+                //   true (==keep the file) if displayNameFilter is contained in the entry's DisplayName (case-insensitive)
+                //   false (==skip the file) otherwise, i.e. the displayNameFilter is specified but the entry does not match it.
+                if (String.IsNullOrEmpty(displayNameFilter) || f.DisplayName.ToUpper().Contains(displayNameFilter.ToUpper()))
+                {
+                    collection.Add(new FolderEntry(f));
+                }
+
+                if (unfilteredItems != null)
+                    unfilteredItems.Add(new FolderEntry(f));
+            }
 
             foreach (StorageFile f in files)
-                collection.Add(new FolderEntry(f));
+            {
+                if (String.IsNullOrEmpty(displayNameFilter) || f.DisplayName.ToUpper().Contains(displayNameFilter.ToUpper()))
+                {
+                    collection.Add(new FolderEntry(f));
+                }
+
+                if (unfilteredItems != null)
+                    unfilteredItems.Add(new FolderEntry(f));
+            }
 
             return true;
         }
@@ -174,7 +205,7 @@ namespace Toccata.Model
         }
 
         /// <summary>
-        /// Sets the source to the provided StorageFile and tells the media player to play it
+        /// Sets the source to the provided StorageFile and tells the media player to play it.
         /// </summary>
         /// <param name="f">the file to play</param>
         public static void Play(StorageFile f)
@@ -197,12 +228,13 @@ namespace Toccata.Model
         }
 
         /// <summary>
-        /// Pauses the media player
+        /// Pauses the media player.
         /// </summary>
         public static void Pause()
         {
             if (ToccataModel.mp == null)
                 return;
+
             ToccataModel.mp.Pause();
         }
 
@@ -223,7 +255,7 @@ namespace Toccata.Model
         }
 
         /// <summary>
-        /// Moves the player's playback position
+        /// Moves the player's playback position.
         /// </summary>
         /// <param name="t">move the playback position to</param>
         public static void SetPlayerPosition(TimeSpan t)

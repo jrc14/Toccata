@@ -34,6 +34,7 @@ using Windows.Media.Playback;
 using Windows.Storage;
 using Windows.UI.Core;
 using Windows.UI.Xaml.Controls;
+using Windows.UI.Xaml;
 
 namespace Toccata.ViewModel
 {
@@ -58,8 +59,8 @@ namespace Toccata.ViewModel
 
         /// <summary>
         /// Call this method before trying to play music.
-        /// Sets up and reads the root folder (where the list of artists is).  At present, this is hard-coded to the user's top-level Music folder.
-        /// Also sets up the media player.
+        /// It sets up and reads the root folder (where the list of artists is).  This is initialised to the user's top-level Music folder, but can be changed.
+        /// Also it sets up the media player.
         /// </summary>
         public void Initialise()
         {
@@ -68,7 +69,7 @@ namespace Toccata.ViewModel
         }
 
         /// <summary>
-        /// Clears the existing lists of albums and tracks, and loads a new list of albums for a given artist
+        /// Clears the existing lists of albums and tracks, and loads a new list of albums for a given artist.
         /// </summary>
         /// <param name="f">the folder whose name is the artist name</param>
         public async void OpenArtistFolder(FolderEntry f)
@@ -76,25 +77,39 @@ namespace Toccata.ViewModel
             this.Albums.Clear();
             this.Tracks.Clear();
 
+            if (string.IsNullOrEmpty(f.DisplayName))
+                this.AlbumsFolderLabel = "";
+            else
+                this.AlbumsFolderLabel = "(in " + f.DisplayName + ")";
+
+            this.TracksFolderLabel = "";
+
             await ToccataModel.PopulateFolderItems(this.Albums, f.storage as StorageFolder);
         }
 
         /// <summary>
-        /// Clears the existing lists of tracks, and loads a new list of tracks for a given album
+        /// Clears the existing lists of tracks, and loads a new list of tracks for a given album.
         /// </summary>
         /// <param name="f">the folder whose name is the album name</param>
         public async void OpenAlbumFolder(FolderEntry f)
         {
             this.Tracks.Clear();
 
+            if (string.IsNullOrEmpty(f.DisplayName))
+                this.TracksFolderLabel = "";
+            else
+                this.TracksFolderLabel = "(in " + f.DisplayName + ")";
+
             await ToccataModel.PopulateFolderItems(this.Tracks, f.storage as StorageFolder);
-            if (this.PlayQueue.Count != 0)
+
+            if (this.PlayQueue.Count != 0) // if there are tracks already queued to play, do not auto-add the ones we just found in this folder
                 return;
-            this.AddTracks();
+
+            this.AddTracks(); // add the newly loaded tracks to the play queue 
         }
 
         /// <summary>
-        /// Adds a track to the bottom of the play queue
+        /// Adds a track to the bottom of the play queue.
         /// </summary>
         /// <param name="f">the track file to add</param>
         public void AddTrackFileToQueue(FolderEntry f)
@@ -105,7 +120,7 @@ namespace Toccata.ViewModel
         }
 
         /// <summary>
-        /// Stops the media player (it puts it into the 'hard-stopped' state)
+        /// Stops the media player (it puts it into the 'hard-stopped' state).
         /// </summary>
         public void Stop()
         {
@@ -128,14 +143,14 @@ namespace Toccata.ViewModel
         }
 
         /// <summary>
-        /// Pauses playback (which is to say, stops it, but does not hard-stop it)
+        /// Pauses playback (which is to say, stops it, but does not hard-stop it).
         /// </summary>
         public void Pause()
         {
             ToccataModel.Pause();
         }
 
-        private List<PlayableItem> history = new List<PlayableItem>(); // tracks we have finished (so the back button can go back to them)
+        private List<PlayableItem> history = new List<PlayableItem>(); // a list of the tracks we have finished (so the back button can go back to them)
         /// <summary>
         /// Stops playing the current track (if it's playing) and goes back to the start of the previous track we were playing.
         /// </summary>
@@ -212,7 +227,7 @@ namespace Toccata.ViewModel
         /// <summary>
         /// Set the playback position.
         /// </summary>
-        /// <param name="t"></param>
+        /// <param name="t">playback position to set</param>
         public void SetPlayerPosition(TimeSpan t)
         {
             ToccataModel.SetPlayerPosition(t);
@@ -242,7 +257,7 @@ namespace Toccata.ViewModel
         }
 
         /// <summary>
-        /// Play the item once the current item has finished
+        /// Play the chosen track once the current one has finished.
         /// </summary>
         /// <param name="i">the item to play next</param>
         public void PlayNext(PlayableItem i)
@@ -278,10 +293,43 @@ namespace Toccata.ViewModel
         }
 
         /// <summary>
+        /// Sorts the play queue into a random order.
+        /// </summary>
+        public void ShufflePlayQueue()
+        {
+            bool wasPlayingBefore = false;
+            if (ToccataModel.MediaPlayerIsPlaying())
+                wasPlayingBefore = true;
+
+            this.Stop();
+
+            List<PlayableItem> playableItemList = new List<PlayableItem>((IEnumerable<PlayableItem>)this.PlayQueue);
+            this.PlayQueue.Clear();
+
+            Random random = new Random();
+            while ((uint)playableItemList.Count > 0U)
+            {
+                int index = 0;
+                if (playableItemList.Count > 1)
+                    index = random.Next(0, playableItemList.Count);
+
+                PlayableItem playableItem = playableItemList[index];
+                playableItemList.RemoveAt(index);
+                this.PlayQueue.Add(playableItem);
+            }
+
+            if (!wasPlayingBefore)
+                return;
+
+            this.StartPlayingIfAppropriate();
+        }
+
+
+        /// <summary>
         /// Loads a list of playable items (storage files) from a file, and puts them onto the bottom of the play queue.
         /// </summary>
         /// <param name="f">The file to read the items from</param>
-        /// <returns></returns>
+        /// <returns>true if the operation succeeded</returns>
         public async Task<bool> LoadPlayQueue(StorageFile f)
         {
             try
@@ -295,10 +343,10 @@ namespace Toccata.ViewModel
                         {
                             try
                             {
-                                StorageFile trackFile =await  StorageFile.GetFileFromPathAsync(path);
+                                StorageFile trackFile = await StorageFile.GetFileFromPathAsync(path);
                                 this.PlayQueue.Add(new PlayableItem(trackFile));
                             }
-                            catch (Exception )
+                            catch (Exception)
                             {
                             }
                         }
@@ -306,43 +354,17 @@ namespace Toccata.ViewModel
                 }
                 return true;
             }
-            catch (Exception )
+            catch (Exception)
             {
                 return false;
             }
         }
 
         /// <summary>
-        /// Sorts the play queue into a random order.
-        /// </summary>
-        public void ShufflePlayQueue()
-        {
-            bool flag = false;
-            if (ToccataModel.MediaPlayerIsPlaying())
-                flag = true;
-            this.Stop();
-            List<PlayableItem> playableItemList = new List<PlayableItem>((IEnumerable<PlayableItem>)this.PlayQueue);
-            this.PlayQueue.Clear();
-            Random random = new Random();
-            while ((uint)playableItemList.Count > 0U)
-            {
-                int index = 0;
-                if (playableItemList.Count > 1)
-                    index = random.Next(0, playableItemList.Count);
-                PlayableItem playableItem = playableItemList[index];
-                playableItemList.RemoveAt(index);
-                this.PlayQueue.Add(playableItem);
-            }
-            if (!flag)
-                return;
-            this.StartPlayingIfAppropriate();
-        }
-
-        /// <summary>
         /// Saves the current play queue to a file.
         /// </summary>
         /// <param name="f">the file to save to</param>
-        /// <returns></returns>
+        /// <returns>true if it managed to save OK</returns>
         public async Task<bool> SavePlayQueue(StorageFile f)
         {
             try
@@ -375,13 +397,13 @@ namespace Toccata.ViewModel
 
         private DateTime dtNextSliderUpdate = DateTime.MinValue; // when will it next be reasonable to update the UI (slider)
         /// <summary>
-        /// Callled from time to time by the player, to update on its progress through the track.
+        /// Callled from time to time by the player, to provide an update on its progress through the track.
         /// </summary>
-        /// <param name="current"></param>
-        /// <param name="total"></param>
+        /// <param name="current">where we have got to in the track</param>
+        /// <param name="total">the length of the track</param>
         public void OnPlaybackPositionChanged(TimeSpan current, TimeSpan total)
         {
-            // The UI does not get update every time that the player reports some progress.  It gets updated:
+            // The UI does not get updated every time that the player reports some progress.  It gets updated:
             // At the end of the track (current == total)
             // At the start of the track (current = 0)
             // Otherwise, no more than once per second.
@@ -398,8 +420,8 @@ namespace Toccata.ViewModel
         /// <summary>
         /// Called when playback state changes (for example, from 'playing' to 'paused' when end of track is reached).
         /// </summary>
-        /// <param name="s">The state we are changing into</param>
-        /// <param name="trackFinished">true if this looks like the end of a track (current==total)</param>
+        /// <param name="s">the state we are changing into</param>
+        /// <param name="trackFinished">true if this looks like the end of a track (non-zero current==total)</param>
         public void OnPlaybackStateChanged(MediaPlaybackState s, bool trackFinished)
         {
             if (s == MediaPlaybackState.Paused)
@@ -407,7 +429,7 @@ namespace Toccata.ViewModel
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                 MainPage.StaticDispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
                 {
-                    MainPage.SetPlayButtonAppearance(false); // The Play button will display a "play" label, and do 'play' when tapped.
+                    MainPage.SetPlayButtonAppearance(false); // Set the Play button to display a "play" label, and do 'play' when tapped.
 
                     if (trackFinished) // paused, and at the end of a track
                     {
@@ -420,7 +442,6 @@ namespace Toccata.ViewModel
                             ToccataModel.Play(this.PlayQueue[0].storage); // ... start playing it.
                         else
                             ToccataModel.Stop(); // ... otherwise, we should hard-stop the player, leaving it ready to play something, when something is queued up.
-
                     }
                     else // paused but not finished the track
                     {
@@ -434,11 +455,11 @@ namespace Toccata.ViewModel
                 {
                     if (s == MediaPlaybackState.Playing)
                     {
-                        MainPage.SetPlayButtonAppearance(true); // The Play button will display a "pause" label, and do 'pause' when tapped.
+                        MainPage.SetPlayButtonAppearance(true); // Set the Play button to display a "pause" label, and do 'pause' when tapped.
                     }
-                    else // could be 'buffering', 'opening' or 'none' - anyhow, it's a state in which the media is not yet playing.
+                    else // could be 'buffering', 'opening' or 'none' - anyhow, it's a state in which the media is not (yet) playing.
                     {
-                        MainPage.SetPlayButtonAppearance(false); // The Play button will display a "play" label, and do 'play' when tapped.
+                        MainPage.SetPlayButtonAppearance(false); // Set the Play button to display a "play" label, and do 'play' when tapped.
                     }
 
                     if (PlayQueue.Count > 0) // (this is just defensive coding, it should always be true)
@@ -452,7 +473,9 @@ namespace Toccata.ViewModel
 
         private StorageFolder _RootFolder = null;
         /// <summary>
-        /// The root folder, from which the app will read the list of artists.  It's hard-coded to the user's Music folder at present.
+        /// The root folder, from which the app will read the list of artists.  It gets initialised to the user's Music folder,
+        /// but can be changed via the UI.  Assigning a location anywhere other than 'somewhere under the user's Music folder' will
+        /// cause app permissioning problems, however.
         /// When it's assigned, by side-effect, the Artists list will be loaded from it, and the lists of Albums and Tracks will be cleared.
         /// </summary>
         public StorageFolder RootFolder
@@ -472,9 +495,202 @@ namespace Toccata.ViewModel
                 this.Albums.Clear();
                 this.Tracks.Clear();
 
+                if(string.IsNullOrEmpty(value.DisplayName))
+                    this.ArtistsFolderLabel = "";
+                else
+                    this.ArtistsFolderLabel = "(in "+value.DisplayName+")";
+
+                this.AlbumsFolderLabel = "";
+                this.TracksFolderLabel = "";
+
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-                ToccataModel.PopulateFolderItems(this.Artists, value);
+                ToccataModel.PopulateFolderItems(this.Artists, value, this.ArtistNameFilter, this._RootFolderUnfilteredContents);
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+            }
+        }
+
+        private List<FolderEntry> _RootFolderUnfilteredContents = new List<FolderEntry>();
+
+        private string _ArtistNameFilter = "";
+        /// <summary>
+        /// If this string is supplied (not null or empty) then it will act to filter the list of artist names - when this.Artists gets populated,
+        /// items having DisplayName not containing the filter text will be skipped.
+        /// When ArtistNameFilter is changed, the set accessor will update this.Artists, enforcing this logic.
+        /// WARNING: Because any change to this member variable means a scan through a potentially long list of artists,
+        /// with a bunch of updates that will affect bound UI elements, it's a bad idea to change the variable too frequently.  Consider throttling
+        /// any code that does this.
+        /// To encourage this behaviour, I provide a method SetArtistNameFilter that sets the filter in a duly throttled way.
+        /// </summary>
+        public string ArtistNameFilter
+        {
+            get
+            {
+                return this._ArtistNameFilter;
+            }
+            private set
+            {
+                if (value == this._ArtistNameFilter)
+                    return;
+
+                // If the previous filter value was null, or if the old filter value is a substring of the new one, we just need to prune the artists list
+                if (String.IsNullOrEmpty(this._ArtistNameFilter) || value.Contains(this._ArtistNameFilter))
+                {
+                    List<FolderEntry> toRemove = new List<FolderEntry>();
+                    string v = value.ToUpper();
+                    foreach (FolderEntry f in this.Artists)
+                    {
+
+                        if (!f.DisplayName.ToUpper().Contains(v))
+                            toRemove.Add(f);
+                    }
+
+                    foreach (FolderEntry f in toRemove)
+                    {
+                        this.Artists.Remove(f);
+                    }
+                }
+                else // we need to refer to the the cached contents of artists directory, and populate the collection according to the new filter string.
+                {
+                    this.Artists.Clear();
+
+                    foreach (FolderEntry f in this._RootFolderUnfilteredContents)
+                    {
+                        if (f.DisplayName.ToUpper().Contains(value.ToUpper()))
+                            this.Artists.Add(f);
+                    }
+                }
+
+                this._ArtistNameFilter = value;
+
+                this.OnPropertyChanged();
+            }
+        }
+
+
+        private DispatcherTimer timer_SetArtistNameFilter=null;
+        private DateTime lastApplied_SetArtistNameFilter = DateTime.MinValue;
+        private string valueToApply_SetArtistNameFilter = null;
+        /// <summary>
+        /// Applies a new artist name filter string, taking care not to do so more often than every 500ms (if it is called more frequently
+        /// than that, it will throw away some invocations, but make sure it always applies the most recently supplied string).
+        /// </summary>
+        /// <param name="f">the filter string to apply</param>
+        public void SetArtistNameFilter(string f)
+        {
+            if(!MainPage.StaticDispatcher.HasThreadAccess) // If we aren't on the UI thread, put the task onto the UI thread, and move on.
+            {
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+                MainPage.StaticDispatcher.RunAsync(CoreDispatcherPriority.Normal, () => { SetArtistNameFilter(f); });
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+                return;
+            }
+            
+            DateTime dtNow = DateTime.Now;
+
+            if(lastApplied_SetArtistNameFilter.AddMilliseconds(500)<dtNow) // the last value was applied more than 500ms ago, so it's OK to just apply a new value
+            {
+               lastApplied_SetArtistNameFilter = dtNow;
+
+                this.ArtistNameFilter = f;
+                
+                return;
+            }
+            else // a value has been applied in the last 500ms - don't apply a new one
+            {
+                if (timer_SetArtistNameFilter != null) // there is a timer running; when it finishes it will apply whatever value is in valueToApply_SetArtistNameFilter
+                {
+                    valueToApply_SetArtistNameFilter = f;
+
+                    return;
+                }
+                else // no timer is running - start one, which will apply, in 500ms, whatever is then the latest value we have been given
+                {
+                   valueToApply_SetArtistNameFilter = f;
+
+                    timer_SetArtistNameFilter = new DispatcherTimer();
+                    timer_SetArtistNameFilter.Interval = TimeSpan.FromMilliseconds(500);
+                    timer_SetArtistNameFilter.Tick += (object s, object e) =>
+                    {
+                        ((DispatcherTimer) s).Stop(); // a timer only ever gets to tick once.
+
+                        if(s== timer_SetArtistNameFilter) // should always be true, except in nasty race conditions
+                        {
+                            lastApplied_SetArtistNameFilter = DateTime.Now; // update the 'time we last applied a value'
+                            timer_SetArtistNameFilter = null; // there is no timer running any more                            
+                            this.ArtistNameFilter = valueToApply_SetArtistNameFilter; // apply the most recently supplied value
+                        }
+                        else // if we have somehow managed to start two timers, ignore whichever one is no longer assigned to this.timer_SetArtistNameFilter
+                        {
+
+                        }
+                    };
+
+                    timer_SetArtistNameFilter.Start();
+
+                    return;
+                }
+            }
+        }
+
+        private string _ArtistsFolderLabel;
+        /// <summary>
+        /// The human readable label for the folder holding the list of artists.  It is not worked out automatically; code should
+        /// update it whenever it loads the artist list from some folder.
+        /// </summary>
+        public string ArtistsFolderLabel
+        {
+            get
+            {
+                return this._ArtistsFolderLabel;
+            }
+            private set
+            {
+                if (value == this._ArtistsFolderLabel)
+                    return;
+                this._ArtistsFolderLabel = value;
+
+                this.OnPropertyChanged();
+            }
+        }
+
+        private string _AlbumsFolderLabel;
+        /// <summary>
+        /// The human readable label for the folder holding the list of albumns.  It is not worked out automatically; code should
+        /// update it whenever it loads the albums list from some folder.
+        /// </summary>
+        public string AlbumsFolderLabel
+        {
+            get
+            {
+                return this._AlbumsFolderLabel;
+            }
+            private set
+            {
+                if (value == this._AlbumsFolderLabel)
+                    return;
+                this._AlbumsFolderLabel = value;
+
+                this.OnPropertyChanged();
+            }
+        }
+        private string _TracksFolderLabel;
+        /// <summary>
+        /// The human readable label for the folder holding the list of tracks.  It is not worked out automatically; code should
+        /// update it whenever it loads the tracks list from some folder.
+        /// </summary>
+        public string TracksFolderLabel
+        {
+            get
+            {
+                return this._TracksFolderLabel;
+            }
+            private set
+            {
+                if (value == this._TracksFolderLabel)
+                    return;
+                this._TracksFolderLabel = value;
+
+                this.OnPropertyChanged();
             }
         }
 

@@ -33,7 +33,7 @@ using Windows.UI.Xaml.Data;
 namespace Toccata
 {
     /// <summary>
-    /// IsFolderSymbolConverter converts a boolean 'isFolder' into a Folder symbol (for true) or an Audio symbol (for false)
+    /// IsFolderSymbolConverter converts a boolean 'isFolder' into a Folder symbol (for true) or an Audio symbol (for false).
     /// </summary>
     public sealed class IsFolderSymbolConverter : IValueConverter
     {
@@ -48,7 +48,6 @@ namespace Toccata
             return Symbol.Audio;
         }
 
-        /// <returns></returns>
         public object ConvertBack(object value, Type targetType, object parameter, string language)
         {
             throw new NotImplementedException(); // it's only ever used in OneWay bindings so this never happens.

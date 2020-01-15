@@ -35,6 +35,7 @@ using Windows.UI.Xaml.Data;
 using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Navigation;
+using Windows.UI.Popups;
 
 using System.CodeDom.Compiler;
 using System.Collections.ObjectModel;
@@ -67,16 +68,15 @@ namespace Toccata
 
         public MainPage()
         {
-            MainPage.Static = this;
+            MainPage.Static = this; // so my static members can get at the MainPage.
 
-            this.InitializeComponent();
+            this.InitializeComponent(); // UWP boilerplate
 
-            this.VM = MainViewModel.Instance;
+            this.VM = MainViewModel.Instance; // to give a handy way for XAML to bind to the viewmodel.
 
-            MainPage.StaticDispatcher = CoreWindow.GetForCurrentThread().Dispatcher;
+            MainPage.StaticDispatcher = CoreWindow.GetForCurrentThread().Dispatcher; // so background threads can invoke stuff on the UI thread if they need to.
 
             this.VM.Initialise(); // Create the viewmodel's lists of artists, albums and tracks, and the play queue , and populate the list of artists.
-
 
             this.SizeChanged += MainPage_SizeChanged;
         }
@@ -89,6 +89,10 @@ namespace Toccata
         /// <param name="e"></param>
         private void MainPage_SizeChanged(object sender, SizeChangedEventArgs e)
         {
+            // The player panel is a square, and the queue panel is a rectangle laid out to the right of it if the screen is in landscape
+            // orientation, and below it if the screen is in portrait orientation.  The queue panel is constrained to be wide enough to contain all
+            // its buttons.
+            // The funky formulae below will achieve this outcome, but I do not really feel that I want to explain why.
             double h = e.NewSize.Height;
             double w = e.NewSize.Width;
             double sz = Math.Min(h, w);
@@ -97,18 +101,103 @@ namespace Toccata
             MainViewModel.Instance.PlayerOrientation = h <= w ? (Orientation)1 : (Orientation)0;
             if (MainViewModel.Instance.PlayerOrientation == 0)
             {
-                double panelSize = Math.Min(sz - 16.0, h - 236.0);
+                double panelSize = Math.Min(sz - 16.0, h - 296.0);
                 MainViewModel.Instance.PlayerPanelSize = panelSize;
                 MainViewModel.Instance.QueuePanelHeight = h - (panelSize + 24.0);
                 MainViewModel.Instance.QueuePanelWidth = panelSize;
             }
             else
             {
-                double panelSize = Math.Min(sz - 16.0, w - 236.0);
+                double panelSize = Math.Min(sz - 16.0, w - 296.0);
                 MainViewModel.Instance.PlayerPanelSize = panelSize;
                 MainViewModel.Instance.QueuePanelHeight = panelSize;
                 MainViewModel.Instance.QueuePanelWidth = w - (panelSize + 24.0);
             }
+        }
+
+        /// <summary>
+        /// Sets the appearance of the UI's Play button - so that if a track is playing, the button will be a Pause button instead of a Play button.
+        /// </summary>
+        /// <param name="showPauseLabel">true means 'show a Pause button', false means 'show a Play button'</param>
+        public static void SetPlayButtonAppearance(bool showPauseLabel) // called when the player's state (playing, paused, ...) changes.
+        {
+            if (showPauseLabel)
+            {
+                MainPage.Static.btnPlay.Label = "pause";
+                MainPage.Static.btnPlay.Icon = new SymbolIcon(Symbol.Pause);
+            }
+            else
+            {
+                MainPage.Static.btnPlay.Label = "play";
+                MainPage.Static.btnPlay.Icon = new SymbolIcon(Symbol.Play);
+            }
+        }
+
+        /// <summary>
+        /// Call this method when the player determines that the UI's position slider should be moved, because of progress playing the track.
+        /// </summary>
+        /// <param name="current">how much of the track has been played</param>
+        /// <param name="total">how long the track is</param>
+        public static void SetSliderPosition(TimeSpan current, TimeSpan total) // called when the player reports a change in position
+        {
+            if (MainPage._SliderIsBeingManipulated) // ignore position changes that happen while the slider UI is being manipulated by the user
+                return;
+
+            double cs = current.TotalSeconds;
+            double ts = total.TotalSeconds;
+
+            MainPage.Static.slPosition.Minimum = 0;
+            MainPage.Static.slPosition.Value = current.TotalSeconds;
+            MainPage.Static.slPosition.Maximum = total.TotalSeconds;
+
+            double num1 = 100.0 * cs / ts;
+            if (num1 < 0.1 || num1 > 99.9) // if at/near the start or end of the track, blank the position label ...
+            {
+                MainPage.Static.tbPosition.Text = "";
+            }
+            else // ... otherwise display minutes & seconds in the position label.
+            {
+                int m = (int)(cs / 60.0);
+                int s = (int)(cs - (double)(60 * m));
+                MainPage.Static.tbPosition.Text = string.Format("{0:00}:{1:00}", (object)m, (object)s);
+            }
+        }
+
+        /// <summary>
+        /// Call this method when the player has detected a change to what track (or no track) is being played, and the track name text needs refreshing.
+        /// </summary>
+        /// <param name="s">text to display, to show the details of the track that is playing</param>
+        public static void SetNowPlaying(string s)
+        {
+            MainPage.Static.tbNowPlaying.Text = s; // set the label that shows track details
+        }
+
+        private static bool _WasPlayingWhenManipulationStarted = false; // was music playing, before the user started touching the slider?
+        private static bool _SliderIsBeingManipulated = false; // set to true while the user is manually manipulating the slider
+        private void slPosition_SliderManipulationStarted(object sender, EventArgs e)
+        {
+            MainPage._SliderIsBeingManipulated = true;
+
+            if (ToccataModel.MediaPlayerIsPlaying())
+                MainPage._WasPlayingWhenManipulationStarted = true;
+
+            MainViewModel.Instance.Pause();
+        }
+
+        private void slPosition_SliderManipulationCompleted(object sender, EventArgs e)
+        {
+            if (sender is ToccataSlider toccataSlider) // should always be true
+            {
+                MainViewModel.Instance.SetPlayerPosition(TimeSpan.FromSeconds(toccataSlider.Value)); // when the user has finished moving the slider, update the player position according to where they put the slider
+
+                if (MainPage._WasPlayingWhenManipulationStarted) // resume play, if we were playing music before the slider manipulation began
+                    MainViewModel.Instance.Play();
+
+                MainPage._WasPlayingWhenManipulationStarted = false;
+
+                MainPage._SliderIsBeingManipulated = false;
+            }
+
         }
 
         private void ArtistItemClick(object sender, ItemClickEventArgs e)
@@ -159,6 +248,29 @@ namespace Toccata
             }
         }
 
+        private async void btnArtistsFolder_Click(object sender, RoutedEventArgs e)
+        {
+            FolderPicker p = new FolderPicker();
+            p.ViewMode = PickerViewMode.List;
+            p.SuggestedStartLocation = PickerLocationId.MusicLibrary;
+            p.FileTypeFilter.Add(".wma");
+            p.FileTypeFilter.Add(".mp3");
+
+            StorageFolder f = null;
+            try
+            {
+                f = await p.PickSingleFolderAsync();
+            }
+            catch (Exception)
+            {
+            }
+            if (f == null)
+                return;
+
+            ViewModel.MainViewModel.Instance.RootFolder = f;
+        }
+
+
         private void btnStop_Click(object sender, RoutedEventArgs e)
         {
             MainViewModel.Instance.Stop(); // hard-stop the player
@@ -192,87 +304,6 @@ namespace Toccata
             MainViewModel.Instance.ClearQueue();
         }
 
-        public static void SetPlayButtonAppearance(bool showPauseLabel) // called when the player's state changes.
-        {
-            if (showPauseLabel)
-            {
-                MainPage.Static.btnPlay.Label="pause";
-                MainPage.Static.btnPlay.Icon = new SymbolIcon(Symbol.Pause);
-            }
-            else
-            {
-                MainPage.Static.btnPlay.Label="play";
-                MainPage.Static.btnPlay.Icon = new SymbolIcon(Symbol.Play);
-            }
-        }
-
-        /// <summary>
-        /// Call this method when the player determines that the UI's position slider should be moved, because of progress playing the track.
-        /// </summary>
-        /// <param name="current">how much of the track has been played</param>
-        /// <param name="total">how long the track is</param>
-        public static void SetSliderPosition(TimeSpan current, TimeSpan total) // called when the player reports a change in position
-        {
-            if (MainPage._SliderIsBeingManipulated) // ignore position changes that happen while the slider UI is being manipulated by the user
-                return;
-
-            double cs = current.TotalSeconds;
-            double ts = total.TotalSeconds;
-
-            MainPage.Static.slPosition.Minimum=0;
-            MainPage.Static.slPosition.Value = current.TotalSeconds;
-            MainPage.Static.slPosition.Maximum = total.TotalSeconds;
-
-            double num1 = 100.0 * cs / ts;
-            if (num1 < 0.1 || num1 > 99.9) // if at/near the start or end of the track, blank the position label ...
-            {
-                MainPage.Static.tbPosition.Text=""; 
-            }
-            else // otherwise display minutes & seconds in the position label.
-            {
-                int m = (int)(cs / 60.0);
-                int s = (int)(cs - (double)(60 * m));
-                MainPage.Static.tbPosition.Text=string.Format("{0:00}:{1:00}", (object)m, (object)s);
-            }
-        }
-
-        /// <summary>
-        /// Call this method when the player has detected a change to what track (or no track) is being played.
-        /// </summary>
-        /// <param name="s">text to display, to show the details of the track that is playing</param>
-        public static void SetNowPlaying(string s)
-        {
-            MainPage.Static.tbNowPlaying.Text=s; // set the label that shows track details
-        }
-
-        private static bool _WasPlayingWhenManipulationStarted = false; // was music playing, before the user started touching the slider?
-        private static bool _SliderIsBeingManipulated = false; // set to true while the user is manually manipulating the slider
-        private void slPosition_SliderManipulationStarted(object sender, EventArgs e)
-        {
-            MainPage._SliderIsBeingManipulated = true;
-
-            if (ToccataModel.MediaPlayerIsPlaying())
-                MainPage._WasPlayingWhenManipulationStarted = true;
-
-            MainViewModel.Instance.Pause();
-        }
-
-        private void slPosition_SliderManipulationCompleted(object sender, EventArgs e)
-        {
-            if (sender is ToccataSlider toccataSlider) // should always be true
-            {
-                MainViewModel.Instance.SetPlayerPosition(TimeSpan.FromSeconds(toccataSlider.Value)); // when the user has finished moving the slider, update the player position according to where they put the slider
-
-                if (MainPage._WasPlayingWhenManipulationStarted) // resume play, if we were playing music before the slider manipulation began
-                    MainViewModel.Instance.Play();
-
-                MainPage._WasPlayingWhenManipulationStarted = false;
-
-                MainPage._SliderIsBeingManipulated = false;
-            }
-
-        }
-
         private void PlayQueue_ItemTapped(object sender, TappedRoutedEventArgs e)
         {
             PlayableItem i = (sender as Grid).Tag as PlayableItem;
@@ -288,8 +319,8 @@ namespace Toccata
 
             MenuFlyoutItem miDelete = new MenuFlyoutItem();
             menuFlyout.Items.Add(miDelete);
-            miDelete.Text="delete '" + str + "'";
-            miDelete.Click += (object ss, RoutedEventArgs ee)=> { MainViewModel.Instance.DeleteFromQueue(i); };
+            miDelete.Text = "delete '" + str + "'";
+            miDelete.Click += (object ss, RoutedEventArgs ee) => { MainViewModel.Instance.DeleteFromQueue(i); };
 
 
             MenuFlyoutItem miNext = new MenuFlyoutItem();
@@ -306,17 +337,17 @@ namespace Toccata
         }
 
         private void PlayQueue_ItemHolding(object sender, HoldingRoutedEventArgs e)
-        { 
-            if(e.HoldingState==Windows.UI.Input.HoldingState.Started)
+        {
+            if (e.HoldingState == Windows.UI.Input.HoldingState.Started)
                 this.PlayQueue_ItemTapped(sender, new TappedRoutedEventArgs());
         }
 
         private async void btnSave_Click(object sender, RoutedEventArgs e)
         {
             FileSavePicker savePicker = new FileSavePicker();
-            savePicker.SuggestedStartLocation=PickerLocationId.DocumentsLibrary;
-            savePicker.FileTypeChoices.Add("Plain Text", new List<string>() { ".txt"});
-            savePicker.SuggestedFileName="playlist";
+            savePicker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
+            savePicker.FileTypeChoices.Add("Plain Text", new List<string>() { ".txt" });
+            savePicker.SuggestedFileName = "playlist";
 
             StorageFile file = null;
 
@@ -324,24 +355,24 @@ namespace Toccata
             {
                 file = await savePicker.PickSaveFileAsync();
             }
-            catch (Exception )
+            catch (Exception)
             {
             }
             if (file == null)
                 return;
 
             CachedFileManager.DeferUpdates(file); // UWP boilerplate
-            
+
             await MainViewModel.Instance.SavePlayQueue(file); // save the current play queue to the file
 
-            FileUpdateStatus status =  await CachedFileManager.CompleteUpdatesAsync(file); // UWP boilerplate
+            FileUpdateStatus status = await CachedFileManager.CompleteUpdatesAsync(file); // UWP boilerplate
         }
 
         private async void btnLoad_Click(object sender, RoutedEventArgs e)
         {
             FileOpenPicker openPicker = new FileOpenPicker();
-            openPicker.ViewMode=PickerViewMode.List;
-            openPicker.SuggestedStartLocation=PickerLocationId.DocumentsLibrary;
+            openPicker.ViewMode = PickerViewMode.List;
+            openPicker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
             openPicker.FileTypeFilter.Add(".txt");
 
             StorageFile file = null;
@@ -349,18 +380,38 @@ namespace Toccata
             {
                 file = await openPicker.PickSingleFileAsync();
             }
-            catch (Exception )
+            catch (Exception)
             {
             }
             if (file == null)
                 return;
-            
+
             await MainViewModel.Instance.LoadPlayQueue(file); // read play queue items from the file, and add them to the bottom of the play queue
         }
 
         private void btnShuffle_Click(object sender, RoutedEventArgs e)
         {
             MainViewModel.Instance.ShufflePlayQueue(); // sort the play queue into a random order
+        }
+
+        private async void btnAbout_Click(object sender, RoutedEventArgs e)
+        {
+            MessageDialog msg = new MessageDialog(
+                "Privacy Policy:\n" + "" +
+                "This application does not collect, store, process or transmit any data about you or your use of the app.\n\n" +
+                "Source code is available, subject to the MIT Licence, at http://github.com/jrc14/toccata. \n\n" +
+                "Contact support@turnipsoft.co.uk for further information.\n\n"+
+                "Copyright (c) 2020 Turnipsoft Ltd, Jim Chapman");
+
+            await msg.ShowAsync();
+        }
+
+        private void FilterTextBox_Changed(object sender, TextChangedEventArgs e)
+        {
+            if(sender is TextBox)
+            {
+                MainViewModel.Instance.SetArtistNameFilter((sender as TextBox).Text); // apply the filter to the list of artists, in a cunning, throttled, way.
+            }
         }
     }
 }

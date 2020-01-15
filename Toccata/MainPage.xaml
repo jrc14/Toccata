@@ -38,7 +38,7 @@ SOFTWARE.
             <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
                 <StackPanel Orientation="Horizontal" Margin="2">
                     <SymbolIcon Symbol="{x:Bind IsFolder, Converter={StaticResource isFolderSymbolConverter}}" Foreground="White" Margin="0,0,12,0"/>
-                    <TextBlock Text="{x:Bind DisplayName}" Foreground="White" TextWrapping="NoWrap" HorizontalAlignment="Left" HorizontalTextAlignment="Left"/>
+                    <TextBlock Text="{x:Bind DisplayName}" Foreground="White" Padding="1,0,1,0" TextWrapping="NoWrap" HorizontalAlignment="Left" HorizontalTextAlignment="Left"/>
                 </StackPanel>
             </ScrollViewer>
         </DataTemplate>
@@ -73,9 +73,32 @@ SOFTWARE.
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
 
-                        <TextBlock Text="artist" Grid.Row="0" Grid.Column="0" Foreground="White" FontWeight="Bold"/>
-                        <TextBlock Text="album" Grid.Row="0" Grid.Column="1" Foreground="White" FontWeight="Bold"/>
-                        <TextBlock Text="track" Grid.Row="0" Grid.Column="2" Foreground="White " FontWeight="Bold"/>
+                        <Grid Grid.Row="0" Grid.Column="0" Height="40">
+                            <Grid.ColumnDefinitions >
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="artists" Grid.Column="0" VerticalAlignment="Center" Foreground="White" FontWeight="Bold"/>
+                            <Button Margin="4,0,0,0" Grid.Column="1" VerticalAlignment="Center" Content="{x:Bind VM.ArtistsFolderLabel, Mode=OneWay}" Click="btnArtistsFolder_Click" Foreground="White" Background="Transparent" BorderBrush="White" BorderThickness="2" VerticalContentAlignment="Center"/>
+                            <Grid Grid.Column="2"  HorizontalAlignment="Right" Margin="4,0,0,0"   Padding="2" ColumnSpacing="6"> 
+                                <Grid.ColumnDefinitions >
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Foreground="White" FontWeight="Bold" FontSize="24" FontFamily="Segoe MDL2 Assets" Text="&#xE71C;"/>
+                                <TextBox Grid.Column="1" Width="50" Height="24" VerticalAlignment="Center" Padding="0" PlaceholderText="Filter"  BorderThickness="0" Foreground="White" TextChanged="FilterTextBox_Changed"/>
+                            </Grid>
+                        </Grid>
+                        <StackPanel Orientation="Horizontal" Grid.Row="0" Grid.Column="1">
+                            <TextBlock Text="albums" VerticalAlignment="Center" Foreground="White" FontWeight="Bold"/>
+                            <TextBlock Margin="4,0,0,0" Text="{x:Bind VM.AlbumsFolderLabel, Mode=OneWay}" VerticalAlignment="Center" Foreground="White"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Grid.Row="0" Grid.Column="2">
+                            <TextBlock Margin="4,0,0,0" Text="tracks" VerticalAlignment="Center" Foreground="White " FontWeight="Bold"/>
+                            <TextBlock Margin="4,0,0,0" Text="{x:Bind VM.TracksFolderLabel, Mode=OneWay}" VerticalAlignment="Center" Foreground="White"/>
+                        </StackPanel>
 
                         <ListView Grid.Row="1" Grid.Column="0" Background="#004000" ItemsSource="{x:Bind VM.Artists, Mode=OneWay}" ItemTemplate="{StaticResource keyFolderItemTemplate}" IsItemClickEnabled="True" SelectionMode="None" ItemClick="ArtistItemClick"/>
                         <ListView Grid.Row="1" Grid.Column="1" Background="#004000" ItemsSource="{x:Bind VM.Albums, Mode=OneWay}" ItemTemplate="{StaticResource keyFolderItemTemplate}" IsItemClickEnabled="True" SelectionMode="None" ItemClick="AlbumItemClick"/>
@@ -122,21 +145,24 @@ SOFTWARE.
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
-                        <TextBlock Text="play queue" Grid.Row="0" Grid.Column="0" Foreground="White" FontWeight="Bold"/>
+                        <TextBlock Text="play queue" Grid.Row="0" Grid.Column="0" Height="40" Foreground="White" FontWeight="Bold"/>
                         <ListView Grid.Row="1" Grid.Column="0" Background="#004000" ItemsSource="{x:Bind VM.PlayQueue, Mode=OneWay}" ItemTemplate="{StaticResource keyPlayableItemTemplate}" IsItemClickEnabled="False" SelectionMode="None"/>
                         <Grid Grid.Row="2" Grid.Column="0">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
                             <Grid.ColumnDefinitions >
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <AppBarButton Icon="Save" Label="save" Click="btnSave_Click" Grid.Row="0" Grid.Column="1" Foreground="White" HorizontalAlignment="Center"/>
-                            <AppBarButton Icon="OpenFile" Label="load" Click="btnLoad_Click" Grid.Row="0" Grid.Column="2" Foreground="White" HorizontalAlignment="Center"/>
-                            <AppBarButton Icon="Shuffle" Label="shuffle" Click="btnShuffle_Click" Grid.Row="0" Grid.Column="3" Foreground="White" HorizontalAlignment="Center"/>
+                            <AppBarButton Icon="Save" Label="save" Click="btnSave_Click" Grid.Row="0" Grid.Column="0" Foreground="White" HorizontalAlignment="Center"/>
+                            <AppBarButton Icon="OpenFile" Label="load" Click="btnLoad_Click" Grid.Row="0" Grid.Column="1" Foreground="White" HorizontalAlignment="Center"/>
+                            <AppBarButton Icon="Shuffle" Label="shuffle" Click="btnShuffle_Click" Grid.Row="0" Grid.Column="2" Foreground="White" HorizontalAlignment="Center"/>
+                            <AppBarButton Icon="Setting" Label="about" Click="btnAbout_Click" Grid.Row="0" Grid.Column="4" Foreground="White" HorizontalAlignment="Center"/>
+                           
                         </Grid>
                     </Grid>
                 </Grid>

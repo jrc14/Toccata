@@ -58,7 +58,6 @@ namespace Toccata.ViewModel
             this.IsFolder = false;
         }
 
-
         private object _storage = null;
 
         /// <summary>
@@ -94,7 +93,7 @@ namespace Toccata.ViewModel
         private bool _IsFolder = false;
 
         /// <summary>
-        /// True is this.storage is expected to be a folder, else false.
+        /// True if this.storage is expected to be a folder, else false.
         /// </summary>
         public bool IsFolder
         {
@@ -129,7 +128,6 @@ namespace Toccata.ViewModel
                 this.OnPropertyChanged(nameof(DisplayName));
             }
         }
-
 
         public event PropertyChangedEventHandler PropertyChanged = (o, e) => { }; // UWP boilerplate
 
