@@ -30,7 +30,6 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using Windows.Storage;
 
-
 namespace Toccata.ViewModel
 {
     /// <summary>
@@ -59,7 +58,6 @@ namespace Toccata.ViewModel
         }
 
         private object _storage = null;
-
         /// <summary>
         /// The storage object in this entry (either a StorageFolder or a StorageFile).  We don't really expect it to be null.
         /// </summary>

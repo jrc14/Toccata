@@ -59,8 +59,8 @@ namespace Toccata.ViewModel
 
         /// <summary>
         /// Call this method before trying to play music.
-        /// It sets up and reads the root folder (where the list of artists is).  This is initialised to the user's top-level Music folder, but can be changed.
-        /// Also it sets up the media player.
+        /// It sets up and reads the root folder (where the list of artists is).  This is initialised to the user's top-level Music
+        ///  folder, but can be changed.  Also it sets up the media player.
         /// </summary>
         public void Initialise()
         {
@@ -69,7 +69,7 @@ namespace Toccata.ViewModel
         }
 
         /// <summary>
-        /// Clears the existing lists of albums and tracks, and loads a new list of albums for a given artist.
+        /// Clears the existing lists of albums and tracks, and then loads a new list of albums for a given artist.
         /// </summary>
         /// <param name="f">the folder whose name is the artist name</param>
         public async void OpenArtistFolder(FolderEntry f)
@@ -88,7 +88,7 @@ namespace Toccata.ViewModel
         }
 
         /// <summary>
-        /// Clears the existing lists of tracks, and loads a new list of tracks for a given album.
+        /// Clears the existing lists of tracks, and then loads a new list of tracks for a given album.
         /// </summary>
         /// <param name="f">the folder whose name is the album name</param>
         public async void OpenAlbumFolder(FolderEntry f)
@@ -102,10 +102,8 @@ namespace Toccata.ViewModel
 
             await ToccataModel.PopulateFolderItems(this.Tracks, f.storage as StorageFolder);
 
-            if (this.PlayQueue.Count != 0) // if there are tracks already queued to play, do not auto-add the ones we just found in this folder
-                return;
-
-            this.AddTracks(); // add the newly loaded tracks to the play queue 
+            if (this.PlayQueue.Count == 0) // if there are no tracks already queued to play, 
+                this.AddTracks(); // auto-add the ones we just found in this folderto the play queue 
         }
 
         /// <summary>
@@ -116,6 +114,7 @@ namespace Toccata.ViewModel
         {
             if (f.IsFolder)
                 return;
+
             this.PlayQueue.Add(new PlayableItem(f.storage as StorageFile));
         }
 
@@ -150,7 +149,12 @@ namespace Toccata.ViewModel
             ToccataModel.Pause();
         }
 
-        private List<PlayableItem> history = new List<PlayableItem>(); // a list of the tracks we have finished (so the back button can go back to them)
+        /// <summary>
+        ///  A list of the tracks we have finished (so the back button can go back to them).  Tracks we have skipped using the 
+        ///  'Next' function will also  be added to it.
+        /// </summary>
+        private List<PlayableItem> history = new List<PlayableItem>();
+
         /// <summary>
         /// Stops playing the current track (if it's playing) and goes back to the start of the previous track we were playing.
         /// </summary>
@@ -173,7 +177,8 @@ namespace Toccata.ViewModel
         }
 
         /// <summary>
-        /// Stop playing the current track and move it to the history, then start playing the track that is now the top of the play queue.
+        /// Stop playing the current track and move it to the history, then start playing the track that is now the top of the play queue.  This is the right
+        /// metyhod to call when the 'Next' button is tapped.
         /// </summary>
         public void Next()
         {
@@ -248,7 +253,7 @@ namespace Toccata.ViewModel
                 wasPlayingBefore = true;
 
             if (this.PlayQueue[0] == i) // if we're removing the top item of the queue (i.e. the current track) 
-                this.Stop();
+                this.Stop(); // then hard-stop playback
 
             this.PlayQueue.Remove(i);
 
@@ -257,7 +262,8 @@ namespace Toccata.ViewModel
         }
 
         /// <summary>
-        /// Play the chosen track once the current one has finished.
+        /// Play the chosen track once the current one has finished.  This is the right method to call when the 'Play Next' context
+        /// menu item is tapped.
         /// </summary>
         /// <param name="i">the item to play next</param>
         public void PlayNext(PlayableItem i)
@@ -266,12 +272,12 @@ namespace Toccata.ViewModel
                 return;
 
             this.PlayQueue.Remove(i); // Remove it from wherever it was in the queue
-            this.PlayQueue.Insert(1, i); // and insert it below the top item
-            this.StartPlayingIfAppropriate(); // and start playing, if the player was in a hard-stopped state.
+            this.PlayQueue.Insert(1, i); // and insert it below the top item.
         }
 
         /// <summary>
-        /// Stop playing whatever we are playing, and start playing the chosen track immediately, if we were previously playing a track.
+        /// Stop playing whatever we are playing, and start playing the chosen track immediately.  This is trhe right method to call
+        /// when the 'Play Now' context menu item is tapped.
         /// </summary>
         /// <param name="i">the item to start playing</param>
         public void PlayNow(PlayableItem i)
@@ -279,17 +285,12 @@ namespace Toccata.ViewModel
             if (this.PlayQueue.Count <= 1 || this.PlayQueue[0] == i) // if the queue has one or less items, 'play next' is meaningless.  If the chosen item is already playing, there is nothing to do.
                 return;
 
-            bool wasPlayingBefore = false;
-            if (ToccataModel.MediaPlayerIsPlaying())
-                wasPlayingBefore = true;
-
             this.Stop(); // stop playing the current item
 
             this.PlayQueue.Remove(i); // Remove the chosen item from wherever it was in the queue
-            this.PlayQueue.Insert(0, i); // and put it at the top of the play queue
+            this.PlayQueue.Insert(0, i); // and put it at the top of the play queue.
 
-            if (wasPlayingBefore)
-                this.StartPlayingIfAppropriate(); // and, if we were playing previously, start playing at the start of the track we just chose.
+            this.StartPlayingIfAppropriate(); // and start playing.
         }
 
         /// <summary>
@@ -303,7 +304,9 @@ namespace Toccata.ViewModel
 
             this.Stop();
 
+            // Construct a list of all the items in the play queue (we will pull random items off it, in the code below).
             List<PlayableItem> playableItemList = new List<PlayableItem>((IEnumerable<PlayableItem>)this.PlayQueue);
+
             this.PlayQueue.Clear();
 
             Random random = new Random();
@@ -311,19 +314,16 @@ namespace Toccata.ViewModel
             {
                 int index = 0;
                 if (playableItemList.Count > 1)
-                    index = random.Next(0, playableItemList.Count);
+                    index = random.Next(0, playableItemList.Count); // pick a random index in the list
 
-                PlayableItem playableItem = playableItemList[index];
+                PlayableItem playableItem = playableItemList[index]; // add the random item to the play queue, and remove it from the list. 
                 playableItemList.RemoveAt(index);
                 this.PlayQueue.Add(playableItem);
             }
 
-            if (!wasPlayingBefore)
-                return;
-
-            this.StartPlayingIfAppropriate();
+            if (wasPlayingBefore)
+                this.StartPlayingIfAppropriate();
         }
-
 
         /// <summary>
         /// Loads a list of playable items (storage files) from a file, and puts them onto the bottom of the play queue.
@@ -394,19 +394,18 @@ namespace Toccata.ViewModel
             }
         }
 
-
-        private DateTime dtNextSliderUpdate = DateTime.MinValue; // when will it next be reasonable to update the UI (slider)
+        private DateTime dtNextSliderUpdate = DateTime.MinValue; // When will it next be reasonable to update the UI (slider)?
         /// <summary>
-        /// Callled from time to time by the player, to provide an update on its progress through the track.
+        /// Callled from time to time by the player, to give the viewmodel an update on its progress through the track.
         /// </summary>
         /// <param name="current">where we have got to in the track</param>
         /// <param name="total">the length of the track</param>
         public void OnPlaybackPositionChanged(TimeSpan current, TimeSpan total)
         {
             // The UI does not get updated every time that the player reports some progress.  It gets updated:
-            // At the end of the track (current == total)
-            // At the start of the track (current = 0)
-            // Otherwise, no more than once per second.
+            // 1) At the end of the track (current == total)
+            // 2) At the start of the track (current = 0)
+            // 3) Otherwise, no more than once per second.
             if (DateTime.Now > dtNextSliderUpdate || current==total || current==TimeSpan.Zero)
             {
                 dtNextSliderUpdate = DateTime.Now.AddSeconds(1);
@@ -418,7 +417,9 @@ namespace Toccata.ViewModel
         }
 
         /// <summary>
-        /// Called when playback state changes (for example, from 'playing' to 'paused' when end of track is reached).
+        /// Called by the player to let the viewmodel know when playback state changes (for example, from 'playing' to 'paused'
+        /// when end of track is reached).  This method adjusts the appearance of the Pause/Play button as needed,
+        /// and kicks off playback of the next track in the queue, if there is one.
         /// </summary>
         /// <param name="s">the state we are changing into</param>
         /// <param name="trackFinished">true if this looks like the end of a track (non-zero current==total)</param>
@@ -443,7 +444,7 @@ namespace Toccata.ViewModel
                         else
                             ToccataModel.Stop(); // ... otherwise, we should hard-stop the player, leaving it ready to play something, when something is queued up.
                     }
-                    else // paused but not finished the track
+                    else // paused but not finished the track - e.g. because the user tapped the Pause button.
                     {
 
                     }
@@ -509,17 +510,24 @@ namespace Toccata.ViewModel
             }
         }
 
+        /// <summary>
+        /// Used to keep a list of the unfiltered contents of the Artist list (when we populate the Artist list itself, we normally
+        /// filter it according to the filter string in this.ArtistNameFilter).  It's helpful when the filter string is changed,
+        /// because sometimes we then need to refer back to contents of folder to restore the full list of artists, but we want to be
+        /// able to do that without rescanning the folder, as this is a slow operation.
+        /// </summary>
         private List<FolderEntry> _RootFolderUnfilteredContents = new List<FolderEntry>();
 
         private string _ArtistNameFilter = "";
         /// <summary>
-        /// If this string is supplied (not null or empty) then it will act to filter the list of artist names - when this.Artists gets populated,
-        /// items having DisplayName not containing the filter text will be skipped.
-        /// When ArtistNameFilter is changed, the set accessor will update this.Artists, enforcing this logic.
+        /// If this string is supplied (not null or empty) then it will act to filter the list of artist names - when this.Artists gets
+        /// populated, items having DisplayName not containing the filter text will be skipped.
+        /// When ArtistNameFilter is changed, the set accessor will update this.Artists, enforcing this filtering logic.
         /// WARNING: Because any change to this member variable means a scan through a potentially long list of artists,
-        /// with a bunch of updates that will affect bound UI elements, it's a bad idea to change the variable too frequently.  Consider throttling
-        /// any code that does this.
-        /// To encourage this behaviour, I provide a method SetArtistNameFilter that sets the filter in a duly throttled way.
+        /// with a bunch of updates that will affect bound UI elements, it's a bad idea to change the variable too frequently.
+        /// Consider throttling any code that does this.
+        /// 
+        /// To encourage you to do so, I provide a method SetArtistNameFilter that sets the filter in a duly throttled way.
         /// </summary>
         public string ArtistNameFilter
         {
@@ -532,14 +540,16 @@ namespace Toccata.ViewModel
                 if (value == this._ArtistNameFilter)
                     return;
 
-                // If the previous filter value was null, or if the old filter value is a substring of the new one, we just need to prune the artists list
+                // If the previous filter value was null, or if the old filter value is a substring of the new one, we just need to
+                // prune the collection in this.Artists.
                 if (String.IsNullOrEmpty(this._ArtistNameFilter) || value.Contains(this._ArtistNameFilter))
                 {
+                    // First build a list of items to remove, then remove them seriatim.  We don't just iterate down the collection
+                    // removing things as we go, because that will get us a 'collection modified' exception from the iterator.
                     List<FolderEntry> toRemove = new List<FolderEntry>();
                     string v = value.ToUpper();
                     foreach (FolderEntry f in this.Artists)
                     {
-
                         if (!f.DisplayName.ToUpper().Contains(v))
                             toRemove.Add(f);
                     }
@@ -549,7 +559,7 @@ namespace Toccata.ViewModel
                         this.Artists.Remove(f);
                     }
                 }
-                else // we need to refer to the the cached contents of artists directory, and populate the collection according to the new filter string.
+                else // else, we need to refer to the the cached contents of artists directory, and populate the Artists collection according to the new filter string.
                 {
                     this.Artists.Clear();
 
@@ -565,7 +575,6 @@ namespace Toccata.ViewModel
                 this.OnPropertyChanged();
             }
         }
-
 
         private DispatcherTimer timer_SetArtistNameFilter=null;
         private DateTime lastApplied_SetArtistNameFilter = DateTime.MinValue;
@@ -673,6 +682,7 @@ namespace Toccata.ViewModel
                 this.OnPropertyChanged();
             }
         }
+
         private string _TracksFolderLabel;
         /// <summary>
         /// The human readable label for the folder holding the list of tracks.  It is not worked out automatically; code should
@@ -758,8 +768,8 @@ namespace Toccata.ViewModel
         public Orientation _PlayerOrientation = Orientation.Horizontal;
         /// <summary>
         /// Depending on whether the screen is landscape or portrait, the play queue panel is either displayed below the player panel
-        /// or to the right of it.  This property (by being bound to a StackPanel's layout) controls which of these is done; 
-        /// Cunning logic in MainPage.MainPage_SizeChanged assigns the property appropriately.
+        /// or to the right of it.  This property (by being bound to a StackPanel's orientation attribute) controls which of these is done; 
+        /// cunning logic in MainPage.MainPage_SizeChanged assigns the property appropriately.
         /// </summary>
         public Orientation PlayerOrientation
         {
@@ -829,8 +839,10 @@ namespace Toccata.ViewModel
         public void OnPropertyChanged([CallerMemberName] string propertyName = null) // UWP boilerplate
         {
             PropertyChangedEventHandler propertyChanged = this.PropertyChanged;
+
             if (propertyChanged == null)
                 return;
+
             propertyChanged((object)this, new PropertyChangedEventArgs(propertyName));
         }
     }

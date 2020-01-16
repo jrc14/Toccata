@@ -47,7 +47,6 @@ namespace Toccata
 
             return Symbol.Audio;
         }
-
         public object ConvertBack(object value, Type targetType, object parameter, string language)
         {
             throw new NotImplementedException(); // it's only ever used in OneWay bindings so this never happens.

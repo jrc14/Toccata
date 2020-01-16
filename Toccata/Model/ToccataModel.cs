@@ -35,7 +35,6 @@ using Windows.Storage;
 using Windows.Storage.FileProperties;
 using Windows.UI.Core;
 
-
 namespace Toccata.Model
 {
     /// <summary>
@@ -201,7 +200,8 @@ namespace Toccata.Model
         /// <returns></returns>
         public static bool MediaPlayerIsPlaying()
         {
-            return ToccataModel.mp != null && ToccataModel.mp.Source != null && (ToccataModel.mp.PlaybackSession != null && ToccataModel.mp.PlaybackSession.PlaybackState == MediaPlaybackState.Playing);
+            return ToccataModel.mp != null && ToccataModel.mp.Source != null 
+                && ToccataModel.mp.PlaybackSession != null && ToccataModel.mp.PlaybackSession.PlaybackState == MediaPlaybackState.Playing;
         }
 
         /// <summary>
@@ -279,19 +279,29 @@ namespace Toccata.Model
 
         }
 
+        /// <summary>
+        /// Handler to update the UI when playback position changes
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="args"></param>
         private static void PlaybackSession_PositionChanged(MediaPlaybackSession sender, object args)
         {
-            MainViewModel.Instance.OnPlaybackPositionChanged(sender.Position, sender.NaturalDuration); // tell the UI about the new position
+            MainViewModel.Instance.OnPlaybackPositionChanged(sender.Position, sender.NaturalDuration); // tell the viewmodel about the new position
         }
 
+        /// <summary>
+        /// Handler to update the UI when playback state changes
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="args"></param>
         private static void PlaybackSession_PlaybackStateChanged(MediaPlaybackSession sender, object args)
         {
             bool trackFinished = false; //at the end of a track?
 
-            if (sender.Position!= TimeSpan.Zero && sender.Position == sender.NaturalDuration) // Position is not at the start of the track, and is equal to the duration of the track
-                trackFinished = true;                                                         // means we are at the end of a track
+            if (sender.Position!= TimeSpan.Zero && sender.Position == sender.NaturalDuration) // Position is not at the start of the track, and 
+                trackFinished = true;                                                         // is equal to the duration of the track, which means we are at the end of a track
 
-            MainViewModel.Instance.OnPlaybackStateChanged(sender.PlaybackState, trackFinished); // tell the UI about the state of playback.
+            MainViewModel.Instance.OnPlaybackStateChanged(sender.PlaybackState, trackFinished); // tell the viewmodel about the state of playback.
         }
     }
 }

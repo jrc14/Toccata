@@ -197,7 +197,6 @@ namespace Toccata
 
                 MainPage._SliderIsBeingManipulated = false;
             }
-
         }
 
         private void ArtistItemClick(object sender, ItemClickEventArgs e)
@@ -321,7 +320,6 @@ namespace Toccata
             menuFlyout.Items.Add(miDelete);
             miDelete.Text = "delete '" + str + "'";
             miDelete.Click += (object ss, RoutedEventArgs ee) => { MainViewModel.Instance.DeleteFromQueue(i); };
-
 
             MenuFlyoutItem miNext = new MenuFlyoutItem();
             menuFlyout.Items.Add(miNext);

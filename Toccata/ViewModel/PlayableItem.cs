@@ -25,7 +25,6 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using Windows.Storage;
 
-
 namespace Toccata.ViewModel
 {
     /// <summary>
