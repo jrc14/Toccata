@@ -296,12 +296,7 @@ namespace Toccata.Model
         /// <param name="args"></param>
         private static void PlaybackSession_PlaybackStateChanged(MediaPlaybackSession sender, object args)
         {
-            bool trackFinished = false; //at the end of a track?
-
-            if (sender.Position!= TimeSpan.Zero && sender.Position == sender.NaturalDuration) // Position is not at the start of the track, and 
-                trackFinished = true;                                                         // is equal to the duration of the track, which means we are at the end of a track
-
-            MainViewModel.Instance.OnPlaybackStateChanged(sender.PlaybackState, trackFinished); // tell the viewmodel about the state of playback.
+            MainViewModel.Instance.OnPlaybackStateChanged(mp); // tell the viewmodel about the state of playback.
         }
     }
 }

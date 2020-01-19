@@ -155,6 +155,8 @@ namespace Toccata.ViewModel
         /// </summary>
         private List<PlayableItem> history = new List<PlayableItem>();
 
+        private static bool _wasPlayingBeforeBackPressed = false;
+        private static DateTime _dtBackPressed = DateTime.MinValue;
         /// <summary>
         /// Stops playing the current track (if it's playing) and goes back to the start of the previous track we were playing.
         /// </summary>
@@ -163,19 +165,29 @@ namespace Toccata.ViewModel
             if (this.history.Count <= 0)
                 return;
 
-            bool wasPlayingBefore = false;
+            // This is a bit nasty and hacky - if the back button is pressed repeatedly in quick succession, the player 
+            // may be transiently paused when the button is pressed for the second, third, ... etc time, as a result of
+            // an earlier press.  So our logic for checking whether the player is playing now, and should therefore be
+            // restarted after we have skipped back a track, needs to be careful to ignore those transient state changes.
+            // Hence this code, which says we will examine the player state only if the button hasn't already been pressed
+            // in the recent past.
+            if (_dtBackPressed.AddMilliseconds(500) < DateTime.Now)
+            {
+                _wasPlayingBeforeBackPressed = ToccataModel.MediaPlayerIsPlaying();
+            }
+            _dtBackPressed = DateTime.Now;
 
-            if (ToccataModel.MediaPlayerIsPlaying())
-                wasPlayingBefore = true;
 
             this.Stop();
             this.PlayQueue.Insert(0, this.history[0]); // Put the top track from ths history list onto the top of the play queue,
             this.history.RemoveAt(0); // and remove it from the history list
 
-            if (wasPlayingBefore)
+            if (_wasPlayingBeforeBackPressed)
                 this.StartPlayingIfAppropriate();
         }
 
+        private static bool _wasPlayingBeforeNextPressed = false;
+        private static DateTime _dtNextPressed = DateTime.MinValue;
         /// <summary>
         /// Stop playing the current track and move it to the history, then start playing the track that is now the top of the play queue.  This is the right
         /// metyhod to call when the 'Next' button is tapped.
@@ -185,16 +197,23 @@ namespace Toccata.ViewModel
             if (this.PlayQueue.Count <= 1) // if there is no queued track, do nothing.  If there is only one queued track, then there is no next track, so do nothing.
                 return;
 
-            bool wasPlayingBefore = false;
-
-            if (ToccataModel.MediaPlayerIsPlaying())
-                wasPlayingBefore = true;
+            // This is a bit nasty and hacky - if the next button is pressed repeatedly in quick succession, the player 
+            // may be transiently paused when the button is pressed for the second, third, ... etc time, as a result of
+            // an earlier press.  So our logic for checking whether the player is playing now, and should therefore be
+            // restarted after we have skipped forward a track, needs to be careful to ignore those transient state changes.
+            // Hence this code, which says we will examine the player state only if the button hasn't already been pressed
+            // in the recent past.
+            if (_dtNextPressed.AddMilliseconds(500) < DateTime.Now)
+            {
+                _wasPlayingBeforeNextPressed = ToccataModel.MediaPlayerIsPlaying();
+            }
+            _dtNextPressed = DateTime.Now;
 
             this.Stop();
             this.history.Insert(0, this.PlayQueue[0]); // Take the currently playing track (the one at the top of the queue), add it to the history
             this.PlayQueue.RemoveAt(0); // and remove it from the play queue.
 
-            if (wasPlayingBefore)
+            if (_wasPlayingBeforeNextPressed)
                 this.StartPlayingIfAppropriate();
         }
 
@@ -418,23 +437,59 @@ namespace Toccata.ViewModel
 
         /// <summary>
         /// Called by the player to let the viewmodel know when playback state changes (for example, from 'playing' to 'paused'
-        /// when end of track is reached).  This method adjusts the appearance of the Pause/Play button as needed,
-        /// and kicks off playback of the next track in the queue, if there is one.
+        /// when end of track is reached).  The viewmodel will then adjust the appearance of the Pause/Play button as needed,
+        /// and kick off playback of the next track in the queue, if there is one.  Because the player sometimes goes through a series
+        /// of transient states in quick succession, we throttle calls to this method, with a latency of 100ms.
         /// </summary>
-        /// <param name="s">the state we are changing into</param>
-        /// <param name="trackFinished">true if this looks like the end of a track (non-zero current==total)</param>
-        public void OnPlaybackStateChanged(MediaPlaybackState s, bool trackFinished)
+        /// <param name="player">media player</param>
+        public void OnPlaybackStateChanged(MediaPlayer player)
         {
-            if (s == MediaPlaybackState.Paused)
-            {
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-                MainPage.StaticDispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
+            MainPage.StaticDispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
+            {
+                ThrottledPlaybackStateChanged(player);
+            });
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+        }
+
+        private bool _playbackStateChangePending = false;
+        //private DispatcherTimer _dtimer = null;
+        private async void ThrottledPlaybackStateChanged(MediaPlayer player)
+        {
+            if (_playbackStateChangePending)
+            {
+                // A change has already been noted, and the 'state changed' handler will get called anyway some time within the next 100ms
+                return;
+            }
+            else
+            {
+                _playbackStateChangePending = true;
+
+                await Task.Delay(100); // allow 100ms for subsequent state changes to come in
+
+                _playbackStateChangePending = false;
+
+                //  
+                // Now adjust the appearance of the Pause/Play button as needed, and kick off playback of the next track in the queue, if there is one.
+                //
+                if (player.PlaybackSession == null) // error - never started
                 {
+                }
+                else if (player.PlaybackSession.PlaybackState == MediaPlaybackState.Paused)
+                {
+                    bool trackFinished = false; //at the end of a track?
+                    if (player.PlaybackSession.Position != TimeSpan.Zero && player.PlaybackSession.Position.Add(TimeSpan.FromSeconds(1))>= player.PlaybackSession.NaturalDuration)
+                    {
+                        // Position is not at the start of the media, and is equal/near to the duration of the player's media,
+                        // This means we are at the end of a track
+                        trackFinished = true;
+                    }
+
                     MainPage.SetPlayButtonAppearance(false); // Set the Play button to display a "play" label, and do 'play' when tapped.
 
                     if (trackFinished) // paused, and at the end of a track
                     {
-                        MainPage.SetNowPlaying(""); // set the text label at the bottom of the slider to blank.
+                        MainPage.SetNowPlaying(""); // "***FINISHED: " + player.PlaybackSession.PlaybackState.ToString() + " " + player.PlaybackSession.Position.TotalSeconds.ToString() + "/" + player.PlaybackSession.NaturalDuration.TotalSeconds.ToString()); // set the text label at the bottom of the slider to blank.
 
                         if (PlayQueue.Count > 0) // (this is just defensive coding, it should always be true)
                             PlayQueue.RemoveAt(0); // We've finished this track, so remove it from the top of the play queue.
@@ -446,15 +501,12 @@ namespace Toccata.ViewModel
                     }
                     else // paused but not finished the track - e.g. because the user tapped the Pause button.
                     {
-
+                        // MainPage.SetNowPlaying("***PAUSED: " + player.PlaybackSession.PlaybackState.ToString()+" "+ player.PlaybackSession.Position.TotalSeconds.ToString()+"/"+ player.PlaybackSession.NaturalDuration.TotalSeconds.ToString());
                     }
-                });
-            }
-            else // playing, buffering, opening, none, or whatever
-            {
-                MainPage.StaticDispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
+                }
+                else // playing, buffering, opening, none, or whatever
                 {
-                    if (s == MediaPlaybackState.Playing)
+                    if (player.PlaybackSession.PlaybackState == MediaPlaybackState.Playing)
                     {
                         MainPage.SetPlayButtonAppearance(true); // Set the Play button to display a "pause" label, and do 'pause' when tapped.
                     }
@@ -465,12 +517,10 @@ namespace Toccata.ViewModel
 
                     if (PlayQueue.Count > 0) // (this is just defensive coding, it should always be true)
                         MainPage.SetNowPlaying(PlayQueue[0].DisplayName + " (" + PlayQueue[0].storage.Path + ")");
-                    else
-                        MainPage.SetNowPlaying("");
-                });
-#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+                }
             }
         }
+
 
         private StorageFolder _RootFolder = null;
         /// <summary>
