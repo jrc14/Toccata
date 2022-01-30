@@ -9,7 +9,7 @@
   <Identity
     Name="5957Turnipsoft.ToccataPlayer"
     Publisher="CN=B62C87CB-2ED8-49A1-B55B-A2ECC5314803"
-    Version="2.0.7.0" />
+    Version="2.0.8.0" />
 
   <mp:PhoneIdentity PhoneProductId="8abde447-d5c1-4492-afd3-6af3256cbf07" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 

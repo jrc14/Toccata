@@ -42,7 +42,6 @@ This is a Windows UWP app for playing audio files. It is pretty simplistic, with
   tracks in it (add, remove, move to top, move to next).
  */
 
-// I added a comment line
 using System;
 using System.Collections.Generic;
 using System.IO;
