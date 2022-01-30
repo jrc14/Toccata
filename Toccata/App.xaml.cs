@@ -41,6 +41,8 @@ This is a Windows UWP app for playing audio files. It is pretty simplistic, with
    queued-up tracks right there in the UI. Buttons and menus are provided to manage the queue (clear, load, save, shuffle) and the
   tracks in it (add, remove, move to top, move to next).
  */
+
+// I added a comment line
 using System;
 using System.Collections.Generic;
 using System.IO;
